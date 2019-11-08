@@ -1,32 +1,20 @@
-// Copyright 2019 Google LLC
+﻿___TERMS_OF_SERVICE___
 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+By creating or modifying this file you agree to Google Tag Manager's Community
+Template Gallery Developer Terms of Service available at
+https://developers.google.com/tag-manager/gallery-tos (or such other URL as
+Google may provide), as modified from time to time.
 
-//     https://www.apache.org/licenses/LICENSE-2.0
-
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 ___INFO___
 
 {
-  "displayName": "Example Template",
-  "description": "This is an example template. For more information, visit https://developers.google.com/tag-manager/templates",
-  "categories": ["AFFILIATE_MARKETING", "ADVERTISING"],
-  "securityGroups": [],
+  "type": "MACRO",
   "id": "cvt_temp_public_id",
-  "type": "TAG",
   "version": 1,
-  "brand": {
-    "thumbnail": "",
-    "displayName": "",
-    "id": "brand_dummy"
-  },
+  "securityGroups": [],
+  "displayName": "Test or Control Group",
+  "description": "Variables that determine Test or Control based on a random number generator that runs every time variable is used.  Returns true if test, false if control.",
   "containerContexts": [
     "WEB"
   ]
@@ -37,13 +25,36 @@ ___TEMPLATE_PARAMETERS___
 
 [
   {
-    "help": "Enter an example measurement ID. The value can be any character. This is only an example.",
-    "displayName": "Example Measurement ID",
-    "defaultValue": "foobarbaz1234",
-    "name": "MeasurementID",
-    "type": "TEXT"
+    "type": "TEXT",
+    "name": "testFreq",
+    "displayName": "Percentage of \"Test\" (true) Results",
+    "simpleValueType": true,
+    "defaultValue": 50,
+    "valueValidators": [
+      {
+        "type": "PERCENTAGE"
+      }
+    ],
+    "help": "Frequency of \"Test\" outcomes as an integer percentage (0-100)"
   }
 ]
+
+
+___SANDBOXED_JS_FOR_WEB_TEMPLATE___
+
+//Runs everytime variable is used, if needed to associate with session consider storing the result somewhere (eg cookie)
+
+const log = require('logToConsole');
+const generateRandom = require('generateRandom');
+
+let randomNum = generateRandom(1,100);
+
+if(randomNum <= data.testFreq) {
+  return true;
+}
+
+else return false;
+
 
 
 ___WEB_PERMISSIONS___
@@ -66,45 +77,69 @@ ___WEB_PERMISSIONS___
       ]
     },
     "isRequired": true
-  },
-  {
-    "instance": {
-      "key": {
-        "publicId": "get_referrer",
-        "versionId": "1"
-      },
-      "param": [
-        {
-          "key": "urlParts",
-          "value": {
-            "type": 1,
-            "string": "any"
-          }
-        }
-      ]
-    },
-    "isRequired": true
   }
 ]
 
 
-___SANDBOXED_JS_FOR_WEB_TEMPLATE___
+___TESTS___
 
-// Enter your template code here.
-const queryPermission = require('queryPermission');
-const getReferrerUrl = require('getReferrerUrl');
-let referrer;
-if (queryPermission('get_referrer', 'query')) {
-  referrer = getReferrerUrl('queryParams');
-}
+scenarios:
+- name: Test Frequency 100
+  code: |-
+    // Call runCode to run the template's code.
+    let variableResult = runCode({testFreq:100});
 
-var log = require('logToConsole');
-log('data =', data);
+    // Verify that the variable returns a result.
+    assertThat(variableResult).isNotEqualTo(undefined);
+    //This should always be true if Test Frequency is 100%
+    assertThat(variableResult).isTrue();
+- name: Test Frequency 0
+  code: |-
+    // Call runCode to run the template's code.
+    let variableResult = runCode({testFreq:0});
 
-// Call data.gtmOnSuccess when the tag is finished.
-data.gtmOnSuccess();
+    // Verify that the variable returns a result.
+    assertThat(variableResult).isNotEqualTo(undefined);
+    //This should always be true if Test Frequency is 100%
+    assertThat(variableResult).isFalse();
+- name: Test Frequency 50
+  code: |+
+    const freq = 100;
+    const iterations = 1000;
+    let numTest = 0;
+    let numControl = 0;
+
+
+    //Test running this a bunch of times and see if it matches what we expect
+    let variableResult;
+
+    for(let i=0; i<iterations; i++){
+      variableResult = runCode({testFreq:freq});
+      if (variableResult){
+        numTest++;
+      }
+      else{
+        numControl++;
+      }
+      assertThat(variableResult).isNotEqualTo(undefined);
+    }
+    let testFreq = numTest / (numTest + numControl);
+    let freqDelta = Math.abs(testFreq * 100 - freq);
+
+    log('numTest: ', numTest);
+    log('numControl: ', numControl);
+    log('testFreq: ', testFreq);
+    log('freqDelta: ', freqDelta);
+
+    assertThat(freqDelta < 1).isTrue();
+
+setup: |
+  const log = require('logToConsole');
+  const Math = require('Math');
 
 
 ___NOTES___
 
-Created on 9/2/2019, 1:02:37 PM
+Created on 11/8/2019, 3:54:03 PM
+
+
